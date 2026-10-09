@@ -1,0 +1,43 @@
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+.tool-bar {
+    -fx-padding: 5 8 5 8;
+    -fx-spacing: 6;
+}
+.tool-bar .button {
+    -fx-padding: 4 12 4 12;
+}
+.tool-bar .button.accent {
+    -fx-base: #0969da;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+.pane-header {
+    -fx-padding: 4 10 4 10;
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: transparent transparent #d1d9e0 transparent;
+    -fx-text-fill: #59636e;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+.text-area {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+.text-area .content {
+    -fx-padding: 10 12 10 12;
+}
+.status-bar {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: #d1d9e0 transparent transparent transparent;
+}
+.status-bar .label {
+    -fx-text-fill: #59636e;
+}
+.status-bar .hyperlink {
+    -fx-padding: 0 2 0 2;
+}

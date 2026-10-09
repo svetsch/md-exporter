@@ -1,0 +1,12 @@
+target/
+*.iml
+.idea/
+.vscode/
+.settings/
+.project
+.classpath
+*.log
+samples/*.docx
+samples/*.html
+samples/*.pdf
+samples/*_files/

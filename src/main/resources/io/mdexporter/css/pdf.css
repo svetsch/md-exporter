@@ -1,0 +1,89 @@
+/* Stylesheet for PDF export (openhtmltopdf: CSS 2.1 + paged media). The @page size/margin rule is prepended. */
+@page {
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: MdxSans, sans-serif;
+    font-size: 8.5pt;
+    color: #6e7781;
+  }
+}
+body {
+  margin: 0;
+  color: #1f2328;
+  font-family: MdxSans, MdxSymbols, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+.markdown-body { word-wrap: break-word; }
+p, blockquote, ul, ol, dl, table, pre, figure, .markdown-alert { margin: 0 0 9pt 0; }
+h1, h2, h3, h4, h5, h6 {
+  margin: 16pt 0 8pt 0;
+  font-weight: bold;
+  line-height: 1.25;
+  page-break-after: avoid;
+  page-break-inside: avoid;
+}
+h1 { font-size: 20pt; padding-bottom: 4pt; border-bottom: 0.75pt solid #d1d9e0; }
+h2 { font-size: 15pt; padding-bottom: 3pt; border-bottom: 0.5pt solid #d1d9e0; }
+h3 { font-size: 12.5pt; }
+h4 { font-size: 11pt; }
+h5 { font-size: 10.5pt; }
+h6 { font-size: 10pt; color: #59636e; }
+a { color: #0969da; text-decoration: none; }
+hr { border: 0; border-top: 2pt solid #d1d9e0; margin: 14pt 0; height: 0; }
+img { max-width: 100%; }
+ul, ol { padding-left: 18pt; }
+li { margin: 1.5pt 0; }
+li > p { margin: 4pt 0; }
+li > ul, li > ol { margin: 2pt 0 0 0; }
+li.task-list-item { list-style-type: none; }
+.task-box { font-family: MdxSymbols, MdxSans, sans-serif; margin-left: -13pt; margin-right: 3pt; }
+blockquote { margin-left: 0; padding: 0 0 0 10pt; color: #59636e; border-left: 3pt solid #d1d9e0; }
+code, kbd, pre, samp { font-family: MdxMono, MdxSymbols, monospace; font-size: 9pt; }
+code { background-color: #eff1f3; padding: 0.5pt 2.5pt; border-radius: 3pt; }
+pre {
+  background-color: #f6f8fa;
+  border: 0.5pt solid #e1e4e8;
+  border-radius: 4pt;
+  padding: 7pt 9pt;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+pre code { background: transparent; padding: 0; border-radius: 0; font-size: 8.5pt; white-space: pre-wrap; }
+kbd { border: 0.5pt solid #c8d1da; border-radius: 3pt; padding: 0 2pt; background: #f6f8fa; }
+table { border-collapse: collapse; width: 100%; -fs-table-paginate: paginate; }
+thead { display: table-header-group; }
+tr { page-break-inside: avoid; }
+th, td { border: 0.5pt solid #c8d1da; padding: 3pt 6pt; vertical-align: top; word-wrap: break-word; }
+th { background-color: #f3f5f7; font-weight: bold; }
+figure.diagram { margin: 4pt 0 10pt 0; text-align: center; page-break-inside: avoid; }
+figure.diagram img { max-width: 100%; }
+.diagram-error {
+  border: 0.75pt solid #ff8182; background: #ffebe9; color: #82071e; padding: 4pt 8pt;
+  word-wrap: break-word; overflow: hidden;
+}
+.diagram-error pre { background: #ffffff; color: #1f2328; }
+.markdown-alert { padding: 4pt 0 4pt 10pt; border-left: 3pt solid #d1d9e0; page-break-inside: avoid; }
+.markdown-alert-title { font-weight: bold; margin-bottom: 3pt; }
+.markdown-alert-note { border-left-color: #0969da; } .markdown-alert-note .markdown-alert-title { color: #0969da; }
+.markdown-alert-tip { border-left-color: #1a7f37; } .markdown-alert-tip .markdown-alert-title { color: #1a7f37; }
+.markdown-alert-important { border-left-color: #8250df; } .markdown-alert-important .markdown-alert-title { color: #8250df; }
+.markdown-alert-warning { border-left-color: #9a6700; } .markdown-alert-warning .markdown-alert-title { color: #9a6700; }
+.markdown-alert-caution { border-left-color: #d1242f; } .markdown-alert-caution .markdown-alert-title { color: #d1242f; }
+.footnotes { font-size: 8.5pt; color: #59636e; border-top: 0.5pt solid #d1d9e0; margin-top: 18pt; padding-top: 4pt; }
+.footnotes ol { padding-left: 14pt; }
+sup { vertical-align: super; font-size: 70%; line-height: 0; }
+sub { vertical-align: sub; font-size: 70%; line-height: 0; }
+.doc-header { margin-bottom: 18pt; }
+.doc-header .doc-title { margin-top: 0; font-size: 24pt; border-bottom: 0; }
+.doc-subtitle { font-size: 13pt; color: #59636e; margin-top: -4pt; }
+.doc-meta { color: #59636e; }
+nav.toc { margin: 0 0 18pt 0; page-break-after: always; }
+nav.toc .toc-title { font-size: 15pt; font-weight: bold; margin-bottom: 8pt; }
+nav.toc ul { list-style-type: none; padding-left: 12pt; margin: 0; }
+nav.toc > ul { padding-left: 0; }
+nav.toc li { margin: 2.5pt 0; }
+nav.toc a { color: #1f2328; }
+nav.toc a.toc-link::after { content: leader('.') target-counter(attr(href), page); }
+.missing-image { color: #82071e; font-style: italic; }
