@@ -7,13 +7,14 @@ author: md-exporter
 # Getting started
 
 Type Markdown on the left, the preview on the right updates as you type.
-Use the **Word**, **HTML** and **PDF** buttons (or the *Export* menu) to export the document.
+Use the *Export* menu (`Ctrl+Shift+D` / `H` / `P`) to export the document to Word, HTML or PDF.
 Open or drop `.md` files onto the window: each one gets its own tab, next to this showcase
-(reopen it any time with the **Showcase** button). Relative image paths are resolved against each file's folder.
+(reopen it any time with *Help → Feature Showcase*). Relative image paths are resolved against each file's folder.
 
 > [!TIP]
 > *Export → Export Multiple Formats…* writes all formats in one go, and *Export Options…* sets the
-> page size, margins, table of contents and Mermaid theme.
+> page size, margins, table of contents, Mermaid theme and the appearance: style (GitHub, Classic,
+> Modern, Academic, Minimal, Dark), accent colour, fonts and text size. The preview shows the chosen style.
 
 ## Text formatting
 

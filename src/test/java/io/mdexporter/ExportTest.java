@@ -120,6 +120,23 @@ class ExportTest {
     }
 
     @Test
+    void previewCarriesSourceLinesButExportsDoNot() throws Exception {
+        var context = new io.mdexporter.export.ExportContext(new DiagramService(List.of(new PlantUmlRenderer())),
+                new io.mdexporter.core.ResourceLoader(document.baseDir()), ExportOptions.defaults(),
+                io.mdexporter.core.ProgressListener.NONE);
+        String preview = new io.mdexporter.export.HtmlBuilder(io.mdexporter.export.HtmlBuilder.Target.PREVIEW,
+                context, null).build(document).toHtml();
+        int headingLine = MARKDOWN.lines().toList().indexOf("# Introduction");
+        assertTrue(preview.matches("(?s).*<h1[^>]*data-line=\"" + headingLine + "\"[^>]*>Introduction.*"),
+                "heading line");
+        int rowLine = MARKDOWN.lines().toList().indexOf("| Beta  |     2 |");
+        assertTrue(preview.contains("data-line=\"" + rowLine + "\""), "table row line");
+        Path out = service.export(document, ExportFormat.HTML, dir.resolve("out/lines.html"),
+                ExportOptions.defaults(), null);
+        assertFalse(Files.readString(out).contains("data-line"), "no source lines in exports");
+    }
+
+    @Test
     void exportsHtmlWithCopiedImages() throws Exception {
         ExportOptions options = ExportOptions.defaults().setEmbedImages(false);
         Path out = service.export(document, ExportFormat.HTML, dir.resolve("copied/report.html"), options, null);

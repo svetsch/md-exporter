@@ -41,3 +41,49 @@
 .status-bar .hyperlink {
     -fx-padding: 0 2 0 2;
 }
+.tool-bar .menu-button {
+    -fx-padding: 4 8 4 8;
+}
+.tool-bar .button.format-button {
+    -fx-padding: 4 9 4 9;
+    -fx-min-width: 30px;
+}
+.tool-bar .menu-button.ai-button {
+    -fx-base: #8250df;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+.tool-bar .menu-button.ai-button .label {
+    -fx-text-fill: white;
+}
+.find-bar {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: transparent transparent #d1d9e0 transparent;
+}
+.find-bar .find-toggle {
+    -fx-padding: 3 7 3 7;
+    -fx-font-family: "Consolas", monospace;
+}
+.find-bar .find-count {
+    -fx-text-fill: #59636e;
+}
+.text-field.error {
+    -fx-control-inner-background: #ffebe9;
+}
+.hint {
+    -fx-text-fill: #59636e;
+    -fx-font-size: 11px;
+}
+.diff-delete {
+    -fx-fill: #cf222e;
+}
+.diff-insert {
+    -fx-fill: #1a7f37;
+    -fx-font-weight: bold;
+}
+.diff-equal, .diff-kept {
+    -fx-fill: #1f2328;
+}
+.diff-rejected {
+    -fx-fill: #8c959f;
+}

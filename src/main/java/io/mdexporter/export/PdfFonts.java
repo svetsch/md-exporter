@@ -2,6 +2,8 @@ package io.mdexporter.export;
 
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import io.mdexporter.core.DocumentStyle;
+import io.mdexporter.core.ThemeFont;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -10,13 +12,17 @@ import java.util.Locale;
 
 /**
  * Registers system TrueType fonts with the PDF renderer under logical family names used by {@code pdf.css}
- * ({@code MdxSans}, {@code MdxMono}, {@code MdxSymbols}). The PDF base-14 fonts only cover Latin-1, so embedding a
- * real font is required for proper Unicode output.
+ * ({@code MdxBody}, {@code MdxHeading}, {@code MdxMono}, {@code MdxSymbols}): the theme's fonts, else a font of the
+ * same kind found on the system. The PDF base-14 fonts only cover Latin-1, so embedding a real font is required for
+ * proper Unicode output.
  */
 final class PdfFonts {
 
     /** One font family candidate: regular, bold, italic, bold-italic file names. */
     private record Family(String regular, String bold, String italic, String boldItalic) {
+        static Family of(ThemeFont.Files f) {
+            return new Family(f.regular(), f.bold(), f.italic(), f.boldItalic());
+        }
     }
 
     private static final List<File> DIRS = fontDirs();
@@ -29,6 +35,18 @@ final class PdfFonts {
             new Family("LiberationSans-Regular.ttf", "LiberationSans-Bold.ttf", "LiberationSans-Italic.ttf",
                     "LiberationSans-BoldItalic.ttf"),
             new Family("NotoSans-Regular.ttf", "NotoSans-Bold.ttf", "NotoSans-Italic.ttf", "NotoSans-BoldItalic.ttf"));
+
+    private static final List<Family> SERIF = List.of(
+            new Family("georgia.ttf", "georgiab.ttf", "georgiai.ttf", "georgiaz.ttf"),
+            new Family("times.ttf", "timesbd.ttf", "timesi.ttf", "timesbi.ttf"),
+            new Family("Times New Roman.ttf", "Times New Roman Bold.ttf", "Times New Roman Italic.ttf",
+                    "Times New Roman Bold Italic.ttf"),
+            new Family("DejaVuSerif.ttf", "DejaVuSerif-Bold.ttf", "DejaVuSerif-Italic.ttf",
+                    "DejaVuSerif-BoldItalic.ttf"),
+            new Family("LiberationSerif-Regular.ttf", "LiberationSerif-Bold.ttf", "LiberationSerif-Italic.ttf",
+                    "LiberationSerif-BoldItalic.ttf"),
+            new Family("NotoSerif-Regular.ttf", "NotoSerif-Bold.ttf", "NotoSerif-Italic.ttf",
+                    "NotoSerif-BoldItalic.ttf"));
 
     private static final List<Family> MONO = List.of(
             new Family("consola.ttf", "consolab.ttf", "consolai.ttf", "consolaz.ttf"),
@@ -46,9 +64,10 @@ final class PdfFonts {
     private PdfFonts() {
     }
 
-    static void register(PdfRendererBuilder builder) {
-        registerFamily(builder, "MdxSans", SANS);
-        registerFamily(builder, "MdxMono", MONO);
+    static void register(PdfRendererBuilder builder, DocumentStyle style) {
+        registerFamily(builder, "MdxBody", candidates(style.bodyFont()));
+        registerFamily(builder, "MdxHeading", candidates(style.headingFont()));
+        registerFamily(builder, "MdxMono", candidates(style.codeFont()));
         for (String name : SYMBOLS) {
             File f = find(name);
             if (f != null) {
@@ -56,6 +75,23 @@ final class PdfFonts {
                 break;
             }
         }
+    }
+
+    /** The font's own files first, then the generic fonts of its kind. */
+    static List<Family> candidates(ThemeFont font) {
+        List<Family> list = new ArrayList<>();
+        font.files().forEach(f -> list.add(Family.of(f)));
+        list.addAll(switch (font.kind()) {
+            case SANS -> SANS;
+            case SERIF -> SERIF;
+            case MONO -> MONO;
+        });
+        return list;
+    }
+
+    /** Whether the theme font itself (not a fallback) is installed. */
+    static boolean isInstalled(ThemeFont font) {
+        return font.files().stream().anyMatch(f -> find(f.regular()) != null);
     }
 
     private static void registerFamily(PdfRendererBuilder builder, String family, List<Family> candidates) {

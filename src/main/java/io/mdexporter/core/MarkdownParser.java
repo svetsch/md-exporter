@@ -13,6 +13,7 @@ import org.commonmark.ext.image.attributes.ImageAttributesExtension;
 import org.commonmark.ext.ins.InsExtension;
 import org.commonmark.ext.task.list.items.TaskListItemsExtension;
 import org.commonmark.node.Node;
+import org.commonmark.parser.IncludeSourceSpans;
 import org.commonmark.parser.Parser;
 
 import java.io.IOException;
@@ -40,7 +41,11 @@ public final class MarkdownParser {
             FootnotesExtension.builder().inlineFootnotes(true).build(),
             ImageAttributesExtension.create());
 
-    private static final Parser PARSER = Parser.builder().extensions(EXTENSIONS).build();
+    /** Block source spans give the preview the line of each element (to follow the editor caret). */
+    private static final Parser PARSER = Parser.builder()
+            .extensions(EXTENSIONS)
+            .includeSourceSpans(IncludeSourceSpans.BLOCKS)
+            .build();
 
     private MarkdownParser() {
     }

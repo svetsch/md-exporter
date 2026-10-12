@@ -1,11 +1,17 @@
 package io.mdexporter.ui;
 
+import io.mdexporter.BuildInfo;
+import io.mdexporter.ai.AiAgent;
+import io.mdexporter.ai.AiPrompts;
 import io.mdexporter.core.ExportFormat;
 import io.mdexporter.core.ExportOptions;
 import io.mdexporter.core.ExportService;
 import io.mdexporter.core.MarkdownDocument;
 import io.mdexporter.core.MarkdownParser;
+import io.mdexporter.core.StyleDefinition;
 import io.mdexporter.diagram.DiagramService;
+import io.mdexporter.editor.MarkdownEditing;
+import io.mdexporter.editor.TextEdit;
 import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
@@ -20,18 +26,23 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -48,6 +59,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,7 +77,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Main window: one tab per open Markdown document (editor + live preview) and the export actions. */
-public final class MainWindow implements DocumentTab.Host {
+public final class MainWindow implements DocumentTab.Host, EditorActions.Context {
 
     private static final String APP_NAME = "Markdown Exporter";
 
@@ -85,6 +97,16 @@ public final class MainWindow implements DocumentTab.Host {
     private final Hyperlink showFolder = new Hyperlink("Show folder");
     private final Menu recentMenu = new Menu("Open _Recent");
     private final CheckMenuItem wrapItem = new CheckMenuItem("_Wrap Lines");
+    private final CheckMenuItem previewItem = new CheckMenuItem("Show _Preview");
+    private final CheckMenuItem syncItem = new CheckMenuItem("_Scroll Preview to Cursor");
+    private final CheckMenuItem formatBarItem = new CheckMenuItem("_Formatting Tool Bar");
+    private final EditorActions actions = new EditorActions(this);
+    private ToolBar formatBar;
+    private final ComboBox<StyleDefinition> styleCombo = new ComboBox<>();
+    private boolean updatingStyleBox;
+    private Menu aiMenu;
+    private MenuButton aiButton;
+    private Separator aiSeparator;
 
     private ExportOptions options;
     private boolean busy;
@@ -136,6 +158,117 @@ public final class MainWindow implements DocumentTab.Host {
         }
     }
 
+    @Override
+    public boolean smartEditing() {
+        return settings.smartEditing();
+    }
+
+    @Override
+    public boolean syncPreview() {
+        return syncItem.isSelected();
+    }
+
+    @Override
+    public void zoom(int direction) {
+        double size = direction == 0 ? AppSettings.DEFAULT_FONT_SIZE
+                : Math.max(8, Math.min(40, settings.fontSize() + direction));
+        settings.fontSize(size);
+        Font font = editorFont();
+        documents().forEach(d -> d.setEditorFont(font));
+        showStatus("Editor font size " + Math.round(size));
+    }
+
+    private Font editorFont() {
+        return Font.font(settings.fontFamily(), settings.fontSize());
+    }
+
+    // ------------------------------------------------------------------ EditorActions.Context
+
+    @Override
+    public DocumentTab current() {
+        Tab tab = tabs.getSelectionModel().getSelectedItem();
+        return tab == null ? null : (DocumentTab) tab.getUserData();
+    }
+
+    @Override
+    public Window window() {
+        return stage;
+    }
+
+    @Override
+    public boolean aiEnabled() {
+        return settings.aiEnabled();
+    }
+
+    @Override
+    public Menu agentMenu() {
+        Menu menu = new Menu("A_gent");
+        ToggleGroup group = new ToggleGroup();
+        AiAgent active = settings.activeAgent();
+        for (AiAgent agent : settings.aiAgents()) {
+            RadioMenuItem item = new RadioMenuItem(agent.toString());
+            item.setMnemonicParsing(false);
+            item.setToggleGroup(group);
+            item.setSelected(active != null && active.id().equals(agent.id()));
+            item.setOnAction(e -> {
+                settings.activeAgentId(agent.id());
+                showStatus("AI agent: " + agent);
+            });
+            menu.getItems().add(item);
+        }
+        if (!menu.getItems().isEmpty()) {
+            menu.getItems().add(new SeparatorMenuItem());
+        }
+        menu.getItems().add(item("_Manage Agents...", null, () -> openSettings(SettingsDialog.TAB_AI)));
+        return menu;
+    }
+
+    @Override
+    public void askAi(AiPrompts.Preset preset) {
+        DocumentTab doc = current();
+        if (doc == null || !settings.aiEnabled()) {
+            return;
+        }
+        if (settings.aiAgents().isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION,
+                    "Add an AI agent (Claude, OpenAI, Gemini, Ollama...) with its API key first.",
+                    ButtonType.OK, ButtonType.CANCEL);
+            alert.initOwner(stage);
+            alert.setTitle(APP_NAME);
+            alert.setHeaderText("No AI agent configured");
+            if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+                return;
+            }
+            openSettings(SettingsDialog.TAB_AI);
+            if (settings.aiAgents().isEmpty() || !settings.aiEnabled()) {
+                return;
+            }
+        }
+        TextArea editor = doc.editor();
+        String text = editor.getText();
+        int start = editor.getSelection().getStart();
+        int end = editor.getSelection().getEnd();
+        AiAssistDialog dialog = new AiAssistDialog(stage, settings, text, editor.getSelectedText(),
+                editor.getFont(), preset);
+        // the dialog is modal: the document cannot change while it is open
+        dialog.showAndWait().ifPresent(outcome -> {
+            String answer = outcome.text();
+            TextEdit edit;
+            if (outcome.action() == AiAssistDialog.Action.REPLACE) {
+                edit = outcome.wholeDocument()
+                        ? TextEdit.between(text, answer)
+                        : new TextEdit(start, end, answer, start, start + answer.length());
+            } else {
+                int last = end > start && text.charAt(end - 1) == '\n' ? end - 1 : end;
+                int at = outcome.wholeDocument() ? text.length() : MarkdownEditing.lineEnd(text, last);
+                edit = MarkdownEditing.insert(text, at, at, MarkdownEditing.MARK_START + answer.strip()
+                        + MarkdownEditing.MARK_END, true);
+            }
+            doc.apply(edit);
+            showStatus("AI suggestion applied \u2013 Ctrl+Z undoes it");
+        });
+    }
+
     // ------------------------------------------------------------------ UI construction
 
     private void buildUi() {
@@ -178,7 +311,12 @@ public final class MainWindow implements DocumentTab.Host {
         statusBar.getStyleClass().add("status-bar");
 
         BorderPane root = new BorderPane(tabs);
-        root.setTop(new VBox(buildMenu(), buildToolBar()));
+        formatBar = actions.formatBar();
+        aiSeparator = new Separator();
+        aiButton = actions.aiButton();
+        formatBar.getItems().addAll(new Separator(), styleBox(), aiSeparator, aiButton);
+        root.setTop(new VBox(buildMenu(), formatBar));
+        applyViewSettings();
         root.setBottom(statusBar);
 
         double[] bounds = settings.windowBounds();
@@ -211,6 +349,7 @@ public final class MainWindow implements DocumentTab.Host {
             DocumentTab doc = current();
             settings.windowBounds(stage.getWidth(), stage.getHeight(),
                     doc != null ? doc.dividerPosition() : 0.5);
+            settings.flush();
             closing = true;
             shutdown();
             Platform.exit();
@@ -233,6 +372,8 @@ public final class MainWindow implements DocumentTab.Host {
                 item("_Close Tab", "Shortcut+W", () -> closeTab(tabs.getSelectionModel().getSelectedItem())),
                 item("Close All Tabs", "Shortcut+Shift+W", () -> closeTabs(List.copyOf(tabs.getTabs()))),
                 new SeparatorMenuItem(),
+                item("Se_ttings...", "Shortcut+COMMA", () -> openSettings(SettingsDialog.TAB_EDITOR)),
+                new SeparatorMenuItem(),
                 exit);
 
         Menu export = new Menu("_Export", null,
@@ -242,19 +383,47 @@ public final class MainWindow implements DocumentTab.Host {
                 new SeparatorMenuItem(),
                 item("Export _Multiple Formats...", "Shortcut+E", this::exportMultiple),
                 new SeparatorMenuItem(),
-                item("Export _Options...", null, this::editOptions));
+                item("Export _Options...", null, () -> openSettings(SettingsDialog.TAB_EXPORT)),
+                item("Export _Styles...", null, this::editStyles));
 
         wrapItem.setSelected(settings.wrapText());
         wrapItem.selectedProperty().addListener((o, a, v) -> {
             documents().forEach(d -> d.setWrapText(v));
             settings.wrapText(v);
         });
+        previewItem.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+V"));
+        previewItem.setSelected(settings.showPreview());
+        previewItem.selectedProperty().addListener((o, a, v) -> {
+            documents().forEach(d -> d.setPreviewVisible(v));
+            settings.showPreview(v);
+        });
+        syncItem.setSelected(settings.syncPreview());
+        syncItem.disableProperty().bind(previewItem.selectedProperty().not());
+        syncItem.selectedProperty().addListener((o, a, v) -> {
+            settings.syncPreview(v);
+            DocumentTab doc = current();
+            if (v && doc != null) {
+                doc.syncPreviewToCaret();
+            }
+        });
+        formatBarItem.setSelected(settings.showFormatBar());
+        formatBarItem.selectedProperty().addListener((o, a, v) -> {
+            settings.showFormatBar(v);
+            applyViewSettings();
+        });
         Menu view = new Menu("_View", null,
-                wrapItem,
+                previewItem,
+                syncItem,
                 item("_Refresh Preview", "F5", () -> {
                     diagrams.clearCache();
                     documents().forEach(DocumentTab::refreshPreview);
                 }),
+                new SeparatorMenuItem(),
+                formatBarItem,
+                wrapItem,
+                item("Zoom _In", "Shortcut+ADD", () -> zoom(1)),
+                item("Zoom _Out", "Shortcut+SUBTRACT", () -> zoom(-1)),
+                item("Reset _Zoom", "Shortcut+NUMPAD0", () -> zoom(0)),
                 new SeparatorMenuItem(),
                 item("_Next Tab", "Shortcut+Page_Down", () -> tabs.getSelectionModel().selectNext()),
                 item("_Previous Tab", "Shortcut+Page_Up", () -> tabs.getSelectionModel().selectPrevious()));
@@ -262,37 +431,11 @@ public final class MainWindow implements DocumentTab.Host {
         Menu help = new Menu("_Help", null,
                 item("_Feature Showcase", null, this::openShowcase),
                 item("_About", null, this::about));
-        MenuBar bar = new MenuBar(file, export, view, help);
+        aiMenu = actions.aiMenu();
+        MenuBar bar = new MenuBar(file, actions.editMenu(), actions.formatMenu(true), actions.insertMenu(true),
+                actions.tableMenu(true), aiMenu, export, view, help);
         bar.setUseSystemMenuBar(true);
         return bar;
-    }
-
-    private ToolBar buildToolBar() {
-        return new ToolBar(
-                toolButton("New", "New document in a new tab (Ctrl+N)", this::newDocument),
-                toolButton("Open", "Open Markdown files in new tabs (Ctrl+O)", this::openDialog),
-                toolButton("Save", "Save (Ctrl+S)", () -> save(current())),
-                new Separator(),
-                accent(toolButton("Word", "Export to Word .docx (Ctrl+Shift+D)", () -> exportSingle(ExportFormat.DOCX))),
-                accent(toolButton("HTML", "Export to HTML (Ctrl+Shift+H)", () -> exportSingle(ExportFormat.HTML))),
-                accent(toolButton("PDF", "Export to PDF (Ctrl+Shift+P)", () -> exportSingle(ExportFormat.PDF))),
-                toolButton("Export...", "Export to several formats at once (Ctrl+E)", this::exportMultiple),
-                new Separator(),
-                toolButton("Options", "Page size, margins, table of contents, diagrams...", this::editOptions),
-                toolButton("Showcase", "Open the feature showcase document", this::openShowcase));
-    }
-
-    private static Button accent(Button b) {
-        b.getStyleClass().add("accent");
-        return b;
-    }
-
-    private static Button toolButton(String text, String tooltip, Runnable action) {
-        Button b = new Button(text);
-        b.setTooltip(new Tooltip(tooltip));
-        b.setOnAction(e -> action.run());
-        b.setFocusTraversable(false);
-        return b;
     }
 
     private static MenuItem item(String text, String accelerator, Runnable action) {
@@ -331,11 +474,6 @@ public final class MainWindow implements DocumentTab.Host {
 
     // ------------------------------------------------------------------ tabs
 
-    private DocumentTab current() {
-        Tab tab = tabs.getSelectionModel().getSelectedItem();
-        return tab == null ? null : (DocumentTab) tab.getUserData();
-    }
-
     private List<DocumentTab> documents() {
         return tabs.getTabs().stream().map(t -> (DocumentTab) t.getUserData()).toList();
     }
@@ -344,7 +482,9 @@ public final class MainWindow implements DocumentTab.Host {
         String name = showcase ? "showcase.md" : "Untitled-" + (++untitledCounter) + ".md";
         DocumentTab current = current();
         double divider = current != null ? current.dividerPosition() : settings.windowBounds()[2];
-        DocumentTab doc = new DocumentTab(this, name, showcase, divider, wrapItem.isSelected());
+        DocumentTab doc = new DocumentTab(this, name, showcase, divider, wrapItem.isSelected(), editorFont(),
+                previewItem.isSelected());
+        doc.editor().setContextMenu(actions.contextMenu(doc));
         Tab tab = doc.tab();
         tab.setOnCloseRequest(e -> {
             if (!confirmDiscard(doc)) {
@@ -633,35 +773,55 @@ public final class MainWindow implements DocumentTab.Host {
             return;
         }
         ExportDialog dialog = new ExportDialog(stage, settings.loadFormats(), exportDirectory(doc), doc.baseName(),
-                options);
+                options, styles());
         dialog.setHeaderText("Export " + doc.displayName() + " to Word, HTML and/or PDF");
         dialog.showAndWait().ifPresent(request -> {
+            boolean restyled = !request.options().style().equals(options.style())
+                    || !request.options().getMermaidTheme().equals(options.getMermaidTheme());
             options = request.options();
             settings.saveOptions(options);
+            if (restyled) {
+                documents().forEach(DocumentTab::refreshPreview);
+                updateStyleBox();
+            }
             settings.saveFormats(request.formats());
             settings.directory("exportDir", request.directory().toFile());
             runExport(doc, request.formats(), request.directory(), request.baseName(), options.copy());
         });
     }
 
-    private void editOptions() {
-        Dialog<ExportOptions> dialog = new Dialog<>();
-        dialog.initOwner(stage);
-        dialog.setTitle("Export Options");
-        dialog.setHeaderText("Settings used for all exports");
-        OptionsPane pane = new OptionsPane(options);
-        pane.setPadding(new Insets(10));
-        dialog.getDialogPane().setContent(pane);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.setResultConverter(b -> b == ButtonType.OK ? pane.toOptions() : null);
-        dialog.showAndWait().ifPresent(o -> {
-            boolean themeChanged = !o.getMermaidTheme().equals(options.getMermaidTheme());
+    /** Opens the settings dialog on the given tab and applies the changes. */
+    private void openSettings(int tab) {
+        String oldTheme = options.getMermaidTheme();
+        var oldStyle = options.style();
+        SettingsDialog.show(stage, settings, options, tab, styles()).ifPresent(o -> {
             options = o;
-            settings.saveOptions(o);
-            if (themeChanged) {
+            wrapItem.setSelected(settings.wrapText());
+            previewItem.setSelected(settings.showPreview());
+            syncItem.setSelected(settings.syncPreview());
+            formatBarItem.setSelected(settings.showFormatBar());
+            Font font = editorFont();
+            documents().forEach(d -> d.setEditorFont(font));
+            applyViewSettings();
+            if (!o.getMermaidTheme().equals(oldTheme) || !o.style().equals(oldStyle)) {
                 documents().forEach(DocumentTab::refreshPreview);
             }
+            updateStyleBox();
+            showStatus("Settings saved to " + settings.store().description());
         });
+    }
+
+    /** Shows or hides the formatting tool bar and the AI entries. */
+    private void applyViewSettings() {
+        boolean bar = settings.showFormatBar();
+        formatBar.setVisible(bar);
+        formatBar.setManaged(bar);
+        boolean ai = settings.aiEnabled();
+        aiMenu.setVisible(ai);
+        aiButton.setVisible(ai);
+        aiButton.setManaged(ai);
+        aiSeparator.setVisible(ai);
+        aiSeparator.setManaged(ai);
     }
 
     private File exportDirectory(DocumentTab doc) {
@@ -721,6 +881,106 @@ public final class MainWindow implements DocumentTab.Host {
         stage.getScene().setCursor(value ? javafx.scene.Cursor.WAIT : javafx.scene.Cursor.DEFAULT);
     }
 
+    // ------------------------------------------------------------------ export styles
+
+    private StyleEditorDialog.Services styleServices() {
+        DocumentTab doc = current();
+        return new StyleEditorDialog.Services(settings, exportService, diagrams, previewExecutor, this::openPath,
+                doc == null ? null : doc::parse);
+    }
+
+    /** Library and editor for the option forms; the editor is opened above the form's own dialog. */
+    private OptionsPane.Styles styles() {
+        return new OptionsPane.Styles(settings.styleLibrary(), current -> {
+            javafx.stage.Window owner = javafx.stage.Window.getWindows().stream()
+                    .filter(javafx.stage.Window::isFocused).findFirst().orElse(stage);
+            return StyleEditorDialog.edit(owner, styleServices(), current);
+        });
+    }
+
+    /** Export → Export Styles: edit the styles; the chosen one becomes the export style. */
+    private void editStyles() {
+        var oldStyle = options.style();
+        StyleEditorDialog.edit(stage, styleServices(), options.getStyleDefinition()).ifPresentOrElse(
+                chosen -> options.setStyleDefinition(chosen),
+                // the current style may have been edited or deleted
+                () -> options.setStyleDefinition(settings.styleLibrary().find(options.getStyleDefinition().key())
+                        .orElse(io.mdexporter.core.ExportTheme.GITHUB.definition())));
+        settings.saveOptions(options);
+        if (!options.style().equals(oldStyle)) {
+            documents().forEach(DocumentTab::refreshPreview);
+        }
+        updateStyleBox();
+        showStatus("Export style: " + options.getStyleDefinition().name());
+    }
+
+    /** Tool bar: export style selector (built-in and custom styles) and a button opening the style editor. */
+    private HBox styleBox() {
+        styleCombo.setTooltip(new Tooltip("Export style of Word, HTML and PDF documents (also shown in the "
+                + "preview)"));
+        styleCombo.setPrefWidth(150);
+        styleCombo.setFocusTraversable(false);
+        styleCombo.setCellFactory(v -> new StyleNameCell());
+        styleCombo.setButtonCell(new StyleNameCell());
+        // the list is re-read when opened: styles may have been added in the editor or the styles folder
+        styleCombo.setOnShowing(e -> updateStyleBox());
+        styleCombo.valueProperty().addListener((o, old, style) -> {
+            if (updatingStyleBox || style == null || style.key().equals(options.getStyleDefinition().key())
+                    && style.sameContent(options.getStyleDefinition())) {
+                return;
+            }
+            var oldStyle = options.style();
+            options.setStyleDefinition(style);
+            settings.saveOptions(options);
+            if (!options.style().equals(oldStyle)) {
+                documents().forEach(DocumentTab::refreshPreview);
+            }
+            showStatus("Export style: " + style.name());
+            DocumentTab doc = current();
+            if (doc != null) {
+                Platform.runLater(() -> doc.editor().requestFocus());
+            }
+        });
+        Button edit = new Button("\u270E");
+        edit.setTooltip(new Tooltip("Edit the export styles, create your own (also with the AI)"));
+        edit.setFocusTraversable(false);
+        edit.getStyleClass().add("format-button");
+        edit.setOnAction(e -> editStyles());
+        Label label = new Label("Style:");
+        HBox box = new HBox(4, label, styleCombo, edit);
+        box.setAlignment(Pos.CENTER_LEFT);
+        updateStyleBox();
+        return box;
+    }
+
+    /** Shows the current export style in the tool bar (after it changed in a dialog). */
+    private void updateStyleBox() {
+        updatingStyleBox = true;
+        try {
+            StyleDefinition current = options.getStyleDefinition();
+            List<StyleDefinition> all = new ArrayList<>(settings.styleLibrary().all());
+            StyleDefinition select = all.stream().filter(s -> s.key().equals(current.key())).findFirst()
+                    .orElse(null);
+            if (select == null) {
+                all.add(current); // e.g. a deleted custom style still in use
+                select = current;
+            }
+            styleCombo.getItems().setAll(all);
+            styleCombo.setValue(select);
+        } finally {
+            updatingStyleBox = false;
+        }
+    }
+
+    /** Style names; custom styles are marked with a star. */
+    private static final class StyleNameCell extends javafx.scene.control.ListCell<StyleDefinition> {
+        @Override
+        protected void updateItem(StyleDefinition s, boolean empty) {
+            super.updateItem(s, empty);
+            setText(empty || s == null ? null : s.name() + (s.builtIn() ? "" : "  \u2605"));
+        }
+    }
+
     private void openPath(Path path) {
         if (path != null) {
             hostServices.showDocument(path.toUri().toString());
@@ -733,17 +993,43 @@ public final class MainWindow implements DocumentTab.Host {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.initOwner(stage);
         alert.setTitle("About " + APP_NAME);
-        alert.setHeaderText(APP_NAME);
+        alert.setHeaderText(APP_NAME + " " + BuildInfo.version());
+        String commit = BuildInfo.commit();
+        StringBuilder build = new StringBuilder();
+        build.append("Version: ").append(BuildInfo.version()).append('\n');
+        if (commit != null) {
+            build.append("Commit: ").append(commit);
+            if (BuildInfo.branch() != null) {
+                build.append(" (").append(BuildInfo.branch()).append(')');
+            }
+            build.append('\n');
+            if (BuildInfo.commitTime() != null) {
+                build.append("Commit date: ").append(BuildInfo.commitTime()).append('\n');
+            }
+        }
+        if (BuildInfo.buildTime() != null) {
+            build.append("Built: ").append(BuildInfo.buildTime()).append('\n');
+        }
         alert.setContentText("""
-                Export Markdown documents to Word, HTML and PDF.
+                Markdown editor with live preview, exporting to Word, HTML and PDF.
 
                 Supports GitHub flavoured Markdown: tables, task lists, alerts, footnotes, \
                 strikethrough, images, YAML front matter, as well as Mermaid, PlantUML and \
                 Graphviz diagrams.
 
-                JavaFX %s · Java %s""".formatted(System.getProperty("javafx.runtime.version", "?"),
-                System.getProperty("java.version")));
-        alert.showAndWait();
+                %s
+                JavaFX %s \u00b7 Java %s
+                Settings: %s""".formatted(build.toString().strip(),
+                System.getProperty("javafx.runtime.version", "?"), System.getProperty("java.version"),
+                settings.store().description()));
+        ButtonType copy = new ButtonType("Copy Version", ButtonBar.ButtonData.LEFT);
+        alert.getButtonTypes().add(0, copy);
+        if (alert.showAndWait().orElse(ButtonType.OK) == copy) {
+            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+            content.putString(APP_NAME + " " + BuildInfo.version()
+                    + (BuildInfo.commitFull() != null ? " (" + BuildInfo.commitFull() + ")" : ""));
+            javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
+        }
     }
 
     private void error(String message, Throwable t) {

@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Word styles; double-brace placeholders are filled from the export theme, hp:N is a size in half points
+     scaled by the text size. -->
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:docDefaults>
     <w:rPrDefault>
       <w:rPr>
-        <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/>
-        <w:sz w:val="22"/>
-        <w:szCs w:val="22"/>
+        <w:rFonts w:ascii="{{bodyWord}}" w:hAnsi="{{bodyWord}}" w:eastAsia="{{bodyWord}}" w:cs="{{bodyWord}}"/>
+        <w:sz w:val="{{hp:22}}"/>
+        <w:szCs w:val="{{hp:22}}"/>
         <w:lang w:val="en-US"/>
       </w:rPr>
     </w:rPrDefault>
@@ -19,7 +21,8 @@
   <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
     <w:name w:val="Normal"/>
     <w:qFormat/>
-    <w:rPr><w:color w:val="1F2328"/></w:rPr>
+    {{normalPPr}}
+    <w:rPr><w:color w:val="{{text}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont">
@@ -34,7 +37,7 @@
     <w:next w:val="Normal"/>
     <w:qFormat/>
     <w:pPr><w:spacing w:after="80"/><w:contextualSpacing/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="52"/><w:szCs w:val="52"/><w:color w:val="1F2328"/></w:rPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{heading}}"/><w:sz w:val="{{hp:52}}"/><w:szCs w:val="{{hp:52}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Subtitle">
@@ -43,7 +46,7 @@
     <w:next w:val="Normal"/>
     <w:qFormat/>
     <w:pPr><w:spacing w:after="240"/></w:pPr>
-    <w:rPr><w:color w:val="59636E"/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:color w:val="{{muted}}"/><w:sz w:val="{{hp:26}}"/><w:szCs w:val="{{hp:26}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Heading1">
@@ -54,11 +57,12 @@
     <w:qFormat/>
     <w:pPr>
       <w:keepNext/><w:keepLines/>
-      <w:pBdr><w:bottom w:val="single" w:sz="6" w:space="2" w:color="D1D9E0"/></w:pBdr>
+      {{h1Rule}}
       <w:spacing w:before="360" w:after="160"/>
+      <w:jc w:val="left"/>
       <w:outlineLvl w:val="0"/>
     </w:pPr>
-    <w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{heading}}"/><w:sz w:val="{{hp:40}}"/><w:szCs w:val="{{hp:40}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Heading2">
@@ -70,11 +74,12 @@
     <w:qFormat/>
     <w:pPr>
       <w:keepNext/><w:keepLines/>
-      <w:pBdr><w:bottom w:val="single" w:sz="4" w:space="2" w:color="D1D9E0"/></w:pBdr>
+      {{h2Rule}}
       <w:spacing w:before="320" w:after="140"/>
+      <w:jc w:val="left"/>
       <w:outlineLvl w:val="1"/>
     </w:pPr>
-    <w:rPr><w:b/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{heading}}"/><w:sz w:val="{{hp:32}}"/><w:szCs w:val="{{hp:32}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Heading3">
@@ -84,8 +89,8 @@
     <w:uiPriority w:val="9"/>
     <w:unhideWhenUsed/>
     <w:qFormat/>
-    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="280" w:after="120"/><w:outlineLvl w:val="2"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="27"/><w:szCs w:val="27"/></w:rPr>
+    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="280" w:after="120"/><w:jc w:val="left"/><w:outlineLvl w:val="2"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{heading}}"/><w:sz w:val="{{hp:27}}"/><w:szCs w:val="{{hp:27}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Heading4">
@@ -95,8 +100,8 @@
     <w:uiPriority w:val="9"/>
     <w:unhideWhenUsed/>
     <w:qFormat/>
-    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="240" w:after="100"/><w:outlineLvl w:val="3"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>
+    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="240" w:after="100"/><w:jc w:val="left"/><w:outlineLvl w:val="3"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{heading}}"/><w:sz w:val="{{hp:24}}"/><w:szCs w:val="{{hp:24}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Heading5">
@@ -106,8 +111,8 @@
     <w:uiPriority w:val="9"/>
     <w:unhideWhenUsed/>
     <w:qFormat/>
-    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="80"/><w:outlineLvl w:val="4"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>
+    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="80"/><w:jc w:val="left"/><w:outlineLvl w:val="4"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{heading}}"/><w:sz w:val="{{hp:22}}"/><w:szCs w:val="{{hp:22}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Heading6">
@@ -117,8 +122,8 @@
     <w:uiPriority w:val="9"/>
     <w:unhideWhenUsed/>
     <w:qFormat/>
-    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="80"/><w:outlineLvl w:val="5"/></w:pPr>
-    <w:rPr><w:b/><w:color w:val="59636E"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr>
+    <w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="200" w:after="80"/><w:jc w:val="left"/><w:outlineLvl w:val="5"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="{{headingWord}}" w:hAnsi="{{headingWord}}" w:eastAsia="{{headingWord}}" w:cs="{{headingWord}}"/><w:b/><w:color w:val="{{muted}}"/><w:sz w:val="{{hp:21}}"/><w:szCs w:val="{{hp:21}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="Quote">
@@ -128,10 +133,10 @@
     <w:uiPriority w:val="29"/>
     <w:qFormat/>
     <w:pPr>
-      <w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="D1D9E0"/></w:pBdr>
+      <w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="{{border}}"/></w:pBdr>
       <w:ind w:left="240"/>
     </w:pPr>
-    <w:rPr><w:color w:val="59636E"/></w:rPr>
+    <w:rPr><w:color w:val="{{muted}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:customStyle="1" w:styleId="SourceCode">
@@ -140,18 +145,19 @@
     <w:qFormat/>
     <w:pPr>
       <w:pBdr>
-        <w:top w:val="single" w:sz="4" w:space="4" w:color="E1E4E8"/>
-        <w:left w:val="single" w:sz="4" w:space="4" w:color="E1E4E8"/>
-        <w:bottom w:val="single" w:sz="4" w:space="4" w:color="E1E4E8"/>
-        <w:right w:val="single" w:sz="4" w:space="4" w:color="E1E4E8"/>
+        <w:top w:val="single" w:sz="4" w:space="4" w:color="{{border}}"/>
+        <w:left w:val="single" w:sz="4" w:space="4" w:color="{{border}}"/>
+        <w:bottom w:val="single" w:sz="4" w:space="4" w:color="{{border}}"/>
+        <w:right w:val="single" w:sz="4" w:space="4" w:color="{{border}}"/>
       </w:pBdr>
-      <w:shd w:val="clear" w:color="auto" w:fill="F6F8FA"/>
+      <w:shd w:val="clear" w:color="auto" w:fill="{{subtle}}"/>
       <w:spacing w:before="60" w:after="200" w:line="240" w:lineRule="auto"/>
       <w:ind w:left="100" w:right="100"/>
+      <w:jc w:val="left"/>
     </w:pPr>
     <w:rPr>
-      <w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:eastAsia="Consolas" w:cs="Consolas"/>
-      <w:sz w:val="18"/><w:szCs w:val="18"/>
+      <w:rFonts w:ascii="{{codeWord}}" w:hAnsi="{{codeWord}}" w:eastAsia="{{codeWord}}" w:cs="{{codeWord}}"/>
+      <w:sz w:val="{{hp:18}}"/><w:szCs w:val="{{hp:18}}"/>
     </w:rPr>
   </w:style>
 
@@ -174,8 +180,8 @@
     <w:name w:val="Table Text"/>
     <w:basedOn w:val="Normal"/>
     <w:qFormat/>
-    <w:pPr><w:spacing w:before="40" w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
-    <w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>
+    <w:pPr><w:spacing w:before="40" w:after="40" w:line="240" w:lineRule="auto"/><w:jc w:val="left"/></w:pPr>
+    <w:rPr><w:sz w:val="{{hp:20}}"/><w:szCs w:val="{{hp:20}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="FootnoteText">
@@ -184,7 +190,7 @@
     <w:uiPriority w:val="99"/>
     <w:unhideWhenUsed/>
     <w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
-    <w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>
+    <w:rPr><w:sz w:val="{{hp:18}}"/><w:szCs w:val="{{hp:18}}"/></w:rPr>
   </w:style>
 
   <w:style w:type="character" w:styleId="FootnoteReference">
@@ -198,16 +204,16 @@
     <w:name w:val="Hyperlink"/>
     <w:uiPriority w:val="99"/>
     <w:unhideWhenUsed/>
-    <w:rPr><w:color w:val="0969DA"/><w:u w:val="single"/></w:rPr>
+    <w:rPr><w:color w:val="{{accent}}"/><w:u w:val="single"/></w:rPr>
   </w:style>
 
   <w:style w:type="character" w:customStyle="1" w:styleId="InlineCode">
     <w:name w:val="Inline Code"/>
     <w:qFormat/>
     <w:rPr>
-      <w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:eastAsia="Consolas" w:cs="Consolas"/>
-      <w:sz w:val="19"/><w:szCs w:val="19"/>
-      <w:shd w:val="clear" w:color="auto" w:fill="EFF1F3"/>
+      <w:rFonts w:ascii="{{codeWord}}" w:hAnsi="{{codeWord}}" w:eastAsia="{{codeWord}}" w:cs="{{codeWord}}"/>
+      <w:sz w:val="{{hp:19}}"/><w:szCs w:val="{{hp:19}}"/>
+      <w:shd w:val="clear" w:color="auto" w:fill="{{codeBg}}"/>
     </w:rPr>
   </w:style>
 
@@ -227,7 +233,7 @@
     <w:next w:val="Normal"/>
     <w:uiPriority w:val="39"/>
     <w:unhideWhenUsed/>
-    <w:pPr><w:spacing w:after="60"/></w:pPr>
+    <w:pPr><w:spacing w:after="60"/><w:jc w:val="left"/></w:pPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="TOC2">
@@ -236,7 +242,7 @@
     <w:next w:val="Normal"/>
     <w:uiPriority w:val="39"/>
     <w:unhideWhenUsed/>
-    <w:pPr><w:spacing w:after="60"/><w:ind w:left="220"/></w:pPr>
+    <w:pPr><w:spacing w:after="60"/><w:ind w:left="220"/><w:jc w:val="left"/></w:pPr>
   </w:style>
 
   <w:style w:type="paragraph" w:styleId="TOC3">
@@ -245,7 +251,7 @@
     <w:next w:val="Normal"/>
     <w:uiPriority w:val="39"/>
     <w:unhideWhenUsed/>
-    <w:pPr><w:spacing w:after="60"/><w:ind w:left="440"/></w:pPr>
+    <w:pPr><w:spacing w:after="60"/><w:ind w:left="440"/><w:jc w:val="left"/></w:pPr>
   </w:style>
 
   <w:style w:type="table" w:default="1" w:styleId="TableNormal">
@@ -271,12 +277,12 @@
     <w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
     <w:tblPr>
       <w:tblBorders>
-        <w:top w:val="single" w:sz="4" w:space="0" w:color="C8D1DA"/>
-        <w:left w:val="single" w:sz="4" w:space="0" w:color="C8D1DA"/>
-        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D1DA"/>
-        <w:right w:val="single" w:sz="4" w:space="0" w:color="C8D1DA"/>
-        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="C8D1DA"/>
-        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="C8D1DA"/>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="{{border}}"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="{{border}}"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="{{border}}"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="{{border}}"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="{{border}}"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="{{border}}"/>
       </w:tblBorders>
       <w:tblCellMar>
         <w:top w:w="40" w:type="dxa"/>
@@ -287,7 +293,7 @@
     </w:tblPr>
     <w:tblStylePr w:type="firstRow">
       <w:rPr><w:b/></w:rPr>
-      <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="F3F5F7"/></w:tcPr>
+      <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="{{tableHeader}}"/></w:tcPr>
     </w:tblStylePr>
   </w:style>
 </w:styles>

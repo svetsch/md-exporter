@@ -30,7 +30,8 @@ final class ExportDialog extends Dialog<ExportDialog.Request> {
     record Request(Set<ExportFormat> formats, Path directory, String baseName, ExportOptions options) {
     }
 
-    ExportDialog(Window owner, Set<ExportFormat> formats, File directory, String baseName, ExportOptions options) {
+    ExportDialog(Window owner, Set<ExportFormat> formats, File directory, String baseName, ExportOptions options,
+                 OptionsPane.Styles styles) {
         initOwner(owner);
         setTitle("Export");
         setHeaderText("Export the document to Word, HTML and/or PDF");
@@ -62,7 +63,7 @@ final class ExportDialog extends Dialog<ExportDialog.Request> {
         });
         TextField nameField = new TextField(baseName);
 
-        OptionsPane optionsPane = new OptionsPane(options);
+        OptionsPane optionsPane = new OptionsPane(options, styles);
 
         VBox content = new VBox(8,
                 bold("Formats"), formatRow,
@@ -73,7 +74,7 @@ final class ExportDialog extends Dialog<ExportDialog.Request> {
                 new Separator(),
                 bold("Options"), optionsPane);
         content.setPadding(new Insets(10));
-        content.setPrefWidth(620);
+        content.setPrefWidth(820);
         getDialogPane().setContent(content);
 
         ButtonType export = new ButtonType("Export", ButtonBar.ButtonData.OK_DONE);

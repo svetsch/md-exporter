@@ -30,7 +30,7 @@ public final class PdfExporter implements Exporter {
                 PdfRendererBuilder pdf = new PdfRendererBuilder();
                 pdf.useFastMode();
                 pdf.useSVGDrawer(new BatikSVGDrawer());
-                PdfFonts.register(pdf);
+                PdfFonts.register(pdf, context.options().style());
                 pdf.withW3cDocument(dom, document.baseDir().toUri().toString());
                 pdf.toStream(out);
                 pdf.run();

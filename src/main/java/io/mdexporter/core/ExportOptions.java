@@ -18,6 +18,19 @@ public final class ExportOptions {
     private String mermaidTheme = "default";
     private boolean openAfterExport = false;
 
+    /** Style (export template) of the documents and of the preview: built-in or custom. */
+    private StyleDefinition styleDefinition = ExportTheme.GITHUB.definition();
+    /** Overrides of the theme; {@code null} keeps the theme's choice. */
+    private String accentColor;
+    private ThemeFont bodyFont;
+    private ThemeFont headingFont;
+    private ThemeFont codeFont;
+    /** Text size relative to the theme (1 = 100 %). */
+    private double textScale = 1.0;
+    private boolean justify = false;
+    /** HTML / PDF / preview: CSS file appended after the theme; {@code null} for none. */
+    private String customCss;
+
     public static ExportOptions defaults() {
         return new ExportOptions();
     }
@@ -32,6 +45,14 @@ public final class ExportOptions {
         o.diagramScale = diagramScale;
         o.mermaidTheme = mermaidTheme;
         o.openAfterExport = openAfterExport;
+        o.styleDefinition = styleDefinition;
+        o.accentColor = accentColor;
+        o.bodyFont = bodyFont;
+        o.headingFont = headingFont;
+        o.codeFont = codeFont;
+        o.textScale = textScale;
+        o.justify = justify;
+        o.customCss = customCss;
         return o;
     }
 
@@ -114,5 +135,103 @@ public final class ExportOptions {
     public ExportOptions setOpenAfterExport(boolean openAfterExport) {
         this.openAfterExport = openAfterExport;
         return this;
+    }
+
+    public StyleDefinition getStyleDefinition() {
+        return styleDefinition;
+    }
+
+    public ExportOptions setStyleDefinition(StyleDefinition style) {
+        this.styleDefinition = style == null ? ExportTheme.GITHUB.definition() : style;
+        return this;
+    }
+
+    /** Selects a built-in style. */
+    public ExportOptions setTheme(ExportTheme theme) {
+        return setStyleDefinition(theme == null ? null : theme.definition());
+    }
+
+    /** Accent colour override as {@code RRGGBB}, or {@code null}. */
+    public String getAccentColor() {
+        return accentColor;
+    }
+
+    /** Accepts {@code #RRGGBB}, {@code RRGGBB} or {@code #RGB}; anything else (or blank) clears the override. */
+    public ExportOptions setAccentColor(String color) {
+        this.accentColor = normalizeColor(color);
+        return this;
+    }
+
+    public ThemeFont getBodyFont() {
+        return bodyFont;
+    }
+
+    public ExportOptions setBodyFont(ThemeFont font) {
+        this.bodyFont = font;
+        return this;
+    }
+
+    public ThemeFont getHeadingFont() {
+        return headingFont;
+    }
+
+    public ExportOptions setHeadingFont(ThemeFont font) {
+        this.headingFont = font;
+        return this;
+    }
+
+    public ThemeFont getCodeFont() {
+        return codeFont;
+    }
+
+    public ExportOptions setCodeFont(ThemeFont font) {
+        this.codeFont = font;
+        return this;
+    }
+
+    public double getTextScale() {
+        return textScale;
+    }
+
+    public ExportOptions setTextScale(double scale) {
+        this.textScale = Double.isNaN(scale) ? 1 : Math.max(0.6, Math.min(2, scale));
+        return this;
+    }
+
+    public boolean isJustify() {
+        return justify;
+    }
+
+    public ExportOptions setJustify(boolean justify) {
+        this.justify = justify;
+        return this;
+    }
+
+    public String getCustomCss() {
+        return customCss;
+    }
+
+    public ExportOptions setCustomCss(String path) {
+        this.customCss = path == null || path.isBlank() ? null : path.trim();
+        return this;
+    }
+
+    /** The theme with every override applied. */
+    public DocumentStyle style() {
+        return DocumentStyle.of(this);
+    }
+
+    static String normalizeColor(String color) {
+        if (color == null) {
+            return null;
+        }
+        String c = color.trim();
+        if (c.startsWith("#")) {
+            c = c.substring(1);
+        }
+        if (c.matches("[0-9a-fA-F]{3}")) {
+            c = "" + c.charAt(0) + c.charAt(0) + c.charAt(1) + c.charAt(1) + c.charAt(2) + c.charAt(2);
+        }
+        return c.matches("[0-9a-fA-F]{6}") ? c.toUpperCase(java.util.Locale.ROOT) : null;
     }
 }

@@ -1,5 +1,6 @@
 package io.mdexporter.export;
 
+import io.mdexporter.core.DocumentStyle;
 import io.mdexporter.core.ImageSupport;
 import io.mdexporter.core.MarkdownDocument;
 import io.mdexporter.core.MarkdownParser;
@@ -51,6 +52,9 @@ public final class HtmlBuilder {
     }
 
     private static final String TOKEN_PREFIX = "@@MDX_DIAGRAM_";
+    /** Elements that get a {@code data-line} attribute in the preview. */
+    private static final Set<String> LINE_TAGS = Set.of("p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol",
+            "blockquote", "table", "tr", "pre", "hr", "div");
 
     private final Target target;
     private final ExportContext context;
@@ -89,10 +93,18 @@ public final class HtmlBuilder {
     }
 
     public Result build(MarkdownDocument md) {
-        HtmlRenderer renderer = HtmlRenderer.builder()
+        HtmlRenderer.Builder builder = HtmlRenderer.builder()
                 .extensions(MarkdownParser.EXTENSIONS)
-                .nodeRendererFactory(CodeBlockRenderer::new)
-                .build();
+                .nodeRendererFactory(CodeBlockRenderer::new);
+        if (target == Target.PREVIEW) {
+            // source line numbers let the preview follow the editor caret
+            builder.attributeProviderFactory(ctx -> (node, tagName, attributes) -> {
+                if (LINE_TAGS.contains(tagName)) {
+                    sourceLine(node).ifPresent(line -> attributes.put("data-line", Integer.toString(line)));
+                }
+            });
+        }
+        HtmlRenderer renderer = builder.build();
         String body = renderer.render(md.root());
         String title = md.title();
 
@@ -178,8 +190,9 @@ public final class HtmlBuilder {
             String language = Nodes.language(block.getInfo());
             html.line();
             if (d.failed() || (pdf && !d.hasPng()) || (!pdf && d.svg() == null)) {
-                html.raw("<div class=\"diagram-error\"><p><strong>" + Entities.escape(label(language))
-                        + " diagram error:</strong> " + Entities.escape(String.valueOf(d.error())) + "</p><pre><code>"
+                html.raw("<div class=\"diagram-error\"" + lineAttribute(block) + "><p><strong>"
+                        + Entities.escape(label(language)) + " diagram error:</strong> "
+                        + Entities.escape(String.valueOf(d.error())) + "</p><pre><code>"
                         + Entities.escape(block.getLiteral()) + "</code></pre></div>");
             } else if (pdf) {
                 String uri = "data:image/png;base64," + Base64.getEncoder().encodeToString(d.png());
@@ -188,10 +201,22 @@ public final class HtmlBuilder {
             } else {
                 String token = TOKEN_PREFIX + svgPlaceholders.size() + "@@";
                 svgPlaceholders.put(token, d.svg());
-                html.raw("<figure class=\"diagram diagram-" + language + "\">" + token + "</figure>");
+                html.raw("<figure class=\"diagram diagram-" + language + "\"" + lineAttribute(block) + ">" + token
+                        + "</figure>");
             }
             html.line();
         }
+    }
+
+    /** Zero based source line of a block node (spans are recorded by {@link MarkdownParser}). */
+    private static Optional<Integer> sourceLine(Node node) {
+        var spans = node.getSourceSpans();
+        return spans == null || spans.isEmpty() ? Optional.empty() : Optional.of(spans.get(0).getLineIndex());
+    }
+
+    private String lineAttribute(Node node) {
+        return target == Target.PREVIEW
+                ? sourceLine(node).map(l -> " data-line=\"" + l + "\"").orElse("") : "";
     }
 
     static String label(String language) {
@@ -445,14 +470,21 @@ public final class HtmlBuilder {
 
     // ------------------------------------------------------------------ CSS
 
+    /** Theme stylesheet, theme switches and the user's CSS file. */
     private String css() {
+        var o = context.options();
+        DocumentStyle style = o.style();
         if (target == Target.PDF) {
-            var o = context.options();
-            String page = String.format(Locale.ROOT, "@page { size: %.1fmm %.1fmm; margin: %.1fmm; }%n",
-                    o.pageWidthMm(), o.pageHeightMm(), o.getMarginMm());
-            return page + resource("css/pdf.css");
+            // a coloured page (dark or tinted styles) covers the whole sheet, margins included
+            String background = !"FFFFFF".equalsIgnoreCase(style.palette().background())
+                    ? " background-color: " + DocumentStyle.css(style.palette().background()) + ";" : "";
+            String page = String.format(Locale.ROOT, "@page { size: %.1fmm %.1fmm; margin: %.1fmm;%s }%n",
+                    o.pageWidthMm(), o.pageHeightMm(), o.getMarginMm(), background);
+            return page + StyleTemplate.render(resource("css/pdf.css"), style) + StyleTemplate.extraCss(style, true)
+                    + StyleTemplate.customCss(style);
         }
-        return resource("css/document.css");
+        return StyleTemplate.render(resource("css/document.css"), style) + StyleTemplate.extraCss(style, false)
+                + StyleTemplate.customCss(style);
     }
 
     static String resource(String name) {

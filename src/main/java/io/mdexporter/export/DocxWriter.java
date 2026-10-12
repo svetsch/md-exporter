@@ -1,5 +1,6 @@
 package io.mdexporter.export;
 
+import io.mdexporter.core.DocumentStyle;
 import io.mdexporter.core.ImageSupport;
 import io.mdexporter.core.MarkdownDocument;
 import io.mdexporter.core.Nodes;
@@ -117,8 +118,6 @@ final class DocxWriter {
     private static final int LIST_HANGING = 300;
     private static final int QUOTE_INDENT = 300;
     private static final String SYMBOL_FONT = "Segoe UI Symbol";
-    private static final String CODE_FONT = "Consolas";
-    private static final String LINK_COLOR = "0969DA";
 
     private static final Map<String, String> ALERT_COLORS = Map.of(
             "NOTE", "0969DA", "TIP", "1A7F37", "IMPORTANT", "8250DF", "WARNING", "9A6700", "CAUTION", "D1242F");
@@ -256,11 +255,14 @@ final class DocxWriter {
     private XWPFNumbering numbering;
     private int bookmarkCounter;
     private int imageCounter;
+    /** Theme of the document; Word pages are always light. */
+    private final DocumentStyle style;
 
     DocxWriter(XWPFDocument doc, MarkdownDocument md, ExportContext ctx) {
         this.doc = doc;
         this.md = md;
         this.ctx = ctx;
+        this.style = ctx.options().style().light();
         double marginMm = ctx.options().getMarginMm();
         this.contentWidthTwips = mmToTwips(ctx.options().pageWidthMm() - 2 * marginMm);
         this.contentHeightTwips = mmToTwips(ctx.options().pageHeightMm() - 2 * marginMm);
@@ -289,14 +291,10 @@ final class DocxWriter {
     // ------------------------------------------------------------------ document setup
 
     private void installStyles() throws Exception {
-        try (InputStream in = DocxWriter.class.getResourceAsStream("/io/mdexporter/docx/styles.xml")) {
-            if (in == null) {
-                throw new IllegalStateException("Missing docx/styles.xml");
-            }
-            CTStyles styles = StylesDocument.Factory.parse(in).getStyles();
-            XWPFStyles xwpfStyles = doc.createStyles();
-            xwpfStyles.setStyles(styles);
-        }
+        String xml = StyleTemplate.render(HtmlBuilder.resource("docx/styles.xml"), style);
+        CTStyles styles = StylesDocument.Factory.parse(xml).getStyles();
+        XWPFStyles xwpfStyles = doc.createStyles();
+        xwpfStyles.setStyles(styles);
     }
 
     private void installNumbering() {
@@ -401,7 +399,7 @@ final class DocxWriter {
         CTSimpleField field = p.getCTP().addNewFldSimple();
         field.setInstr("PAGE \\* MERGEFORMAT");
         CTR r = field.addNewR();
-        r.addNewRPr().addNewColor().setVal("6E7781");
+        r.addNewRPr().addNewColor().setVal(style.palette().muted());
         r.addNewT().setStringValue("1");
     }
 
@@ -448,7 +446,7 @@ final class DocxWriter {
         text.setSpace(SpaceAttribute.Space.PRESERVE);
         ctp.addNewR().addNewFldChar().setFldCharType(STFldCharType.SEPARATE);
         CTR placeholder = ctp.addNewR();
-        placeholder.addNewRPr().addNewColor().setVal("59636E");
+        placeholder.addNewRPr().addNewColor().setVal(style.palette().muted());
         placeholder.addNewT().setStringValue("Right-click and choose \u201CUpdate Field\u201D to refresh the table of contents.");
         ctp.addNewR().addNewFldChar().setFldCharType(STFldCharType.END);
         p.setPageBreak(false);
@@ -631,7 +629,7 @@ final class DocxWriter {
 
     private void renderAlert(Alert alert, Ctx c) {
         String type = alert.getType().toUpperCase(Locale.ROOT);
-        String color = ALERT_COLORS.getOrDefault(type, "59636E");
+        String color = ALERT_COLORS.getOrDefault(type, style.palette().muted());
         Ctx q = c.withoutMarker().quote(color);
         String title = AlertsExtension.STANDARD_TYPES.getOrDefault(type, capitalize(type));
         Node first = alert.getFirstChild();
@@ -674,7 +672,7 @@ final class DocxWriter {
         bottom.setVal(STBorder.SINGLE);
         bottom.setSz(BigInteger.valueOf(12));
         bottom.setSpace(BigInteger.ONE);
-        bottom.setColor("D1D9E0");
+        bottom.setColor(style.palette().border());
         p.setSpacingAfter(240);
     }
 
@@ -802,7 +800,7 @@ final class DocxWriter {
                 cell.setWidth(String.valueOf(widths[col]));
                 cell.setWidthType(TableWidthType.DXA);
                 if (header) {
-                    cell.setColor("F3F5F7");
+                    cell.setColor(style.palette().tableHeader());
                 }
                 XWPFParagraph p = cell.getParagraphs().isEmpty() ? cell.addParagraph() : cell.getParagraphs().get(0);
                 p.setStyle("TableText");
@@ -929,13 +927,13 @@ final class DocxWriter {
         run.setText(text);
     }
 
-    private static void apply(XWPFRun run, Fmt f) {
+    private void apply(XWPFRun run, Fmt f) {
         if (f.code) {
             run.setStyle("InlineCode");
         }
         if (f.link) {
             if (f.code) {
-                run.setColor(LINK_COLOR);
+                run.setColor(style.palette().accent());
                 run.setUnderline(UnderlinePatterns.SINGLE);
             } else {
                 run.setStyle("Hyperlink");

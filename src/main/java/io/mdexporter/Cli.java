@@ -2,10 +2,15 @@ package io.mdexporter;
 
 import io.mdexporter.core.ExportFormat;
 import io.mdexporter.core.ExportOptions;
+import io.mdexporter.core.ExportTheme;
 import io.mdexporter.core.ExportService;
 import io.mdexporter.core.MarkdownDocument;
 import io.mdexporter.core.MarkdownParser;
 import io.mdexporter.core.PageSize;
+import io.mdexporter.core.StyleDefinition;
+import io.mdexporter.core.StyleLibrary;
+import io.mdexporter.core.ThemeFont;
+import io.mdexporter.settings.SettingsLocation;
 import io.mdexporter.diagram.DiagramService;
 import io.mdexporter.diagram.FxToolkit;
 import javafx.application.Platform;
@@ -37,6 +42,19 @@ public final class Cli {
                   --no-embed          HTML: copy images to <name>_files instead of embedding them
                   --theme <name>      Mermaid theme: default, neutral, forest, dark, base
                   --scale <n>         diagram raster scale for Word/PDF (default: 2)
+
+            Appearance:
+                  --style <name>      github (default), classic, modern, academic, minimal, dark,
+                                      the name of a custom style, or a style .json file
+                  --accent <color>    accent colour (links, coloured headings), e.g. #b5179e
+                  --font <name>       text font: Segoe UI, Arial, Calibri, Verdana, Trebuchet MS, Georgia,
+                                      Times New Roman, Palatino Linotype
+                  --heading-font <name>  heading font (same choices)
+                  --code-font <name>  code font: Consolas, Courier New
+                  --text-size <pct>   text size in percent of the style's size (default: 100)
+                  --justify           justified paragraphs
+                  --css <file>        HTML/PDF: CSS file applied after the style
+              -v, --version           print the version and commit
               -h, --help              show this help
             """;
 
@@ -58,6 +76,10 @@ public final class Cli {
                         out.print(USAGE);
                         return 0;
                     }
+                    case "-v", "--version" -> {
+                        out.println("Markdown Exporter " + BuildInfo.summary());
+                        return 0;
+                    }
                     case "-x", "--export" -> {
                         // explicit command line mode
                     }
@@ -76,6 +98,32 @@ public final class Cli {
                     case "--no-embed" -> options.setEmbedImages(false);
                     case "--theme" -> options.setMermaidTheme(value(args, ++i, a));
                     case "--scale" -> options.setDiagramScale(Double.parseDouble(value(args, ++i, a)));
+                    case "--style" -> options.setStyleDefinition(style(value(args, ++i, a)));
+                    case "--accent" -> {
+                        String color = value(args, ++i, a);
+                        if (options.setAccentColor(color).getAccentColor() == null) {
+                            throw new IllegalArgumentException("Invalid colour " + color + " (use #RRGGBB)");
+                        }
+                    }
+                    case "--font" -> options.setBodyFont(textFont(value(args, ++i, a)));
+                    case "--heading-font" -> options.setHeadingFont(textFont(value(args, ++i, a)));
+                    case "--code-font" -> {
+                        ThemeFont font = ThemeFont.parse(value(args, ++i, a));
+                        if (!font.isMonospaced()) {
+                            throw new IllegalArgumentException(font + " is not a code font");
+                        }
+                        options.setCodeFont(font);
+                    }
+                    case "--text-size" -> options.setTextScale(
+                            Double.parseDouble(value(args, ++i, a).replace("%", "")) / 100);
+                    case "--justify" -> options.setJustify(true);
+                    case "--css" -> {
+                        Path css = Path.of(value(args, ++i, a));
+                        if (!Files.isRegularFile(css)) {
+                            throw new IllegalArgumentException("CSS file not found: " + css);
+                        }
+                        options.setCustomCss(css.toAbsolutePath().toString());
+                    }
                     default -> {
                         if (a.startsWith("-")) {
                             throw new IllegalArgumentException("Unknown option " + a);
@@ -128,6 +176,32 @@ public final class Cli {
             }
         }
         return failures == 0 ? 0 : 1;
+    }
+
+    /** A built-in style, a custom style of the styles folder, or a style JSON file. */
+    private static StyleDefinition style(String value) {
+        Path file = Path.of(value);
+        if (value.toLowerCase(java.util.Locale.ROOT).endsWith(".json") && Files.isRegularFile(file)) {
+            try {
+                StyleDefinition style = StyleLibrary.fromJson(Files.readString(file),
+                        ExportTheme.GITHUB.definition());
+                return style.asCustom(style.name());
+            } catch (java.io.IOException | IllegalArgumentException e) {
+                throw new IllegalArgumentException("Cannot read style " + file + ": " + e.getMessage());
+            }
+        }
+        StyleLibrary library = new StyleLibrary(SettingsLocation.resolve().location().stylesDirectory());
+        return library.find(value).orElseThrow(() -> new IllegalArgumentException("Unknown style " + value
+                + "; use one of " + String.join(", ", library.all().stream().map(s -> s.builtIn()
+                ? s.id().toLowerCase(java.util.Locale.ROOT) : "\"" + s.name() + "\"").toList())));
+    }
+
+    private static ThemeFont textFont(String name) {
+        ThemeFont font = ThemeFont.parse(name);
+        if (font.isMonospaced()) {
+            throw new IllegalArgumentException(font + " is a code font");
+        }
+        return font;
     }
 
     private static String value(String[] args, int index, String option) {
