@@ -47,7 +47,9 @@ import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -102,6 +104,9 @@ public final class MainWindow implements DocumentTab.Host, EditorActions.Context
     private final CheckMenuItem formatBarItem = new CheckMenuItem("_Formatting Tool Bar");
     private final EditorActions actions = new EditorActions(this);
     private ToolBar formatBar;
+    /** Alt+letter shortcuts of the top-level menus. */
+    private final java.util.Map<KeyCode, Menu> menuKeys = new java.util.HashMap<>();
+    private boolean altGraphDown;
     private final ComboBox<StyleDefinition> styleCombo = new ComboBox<>();
     private boolean updatingStyleBox;
     private Menu aiMenu;
@@ -340,6 +345,7 @@ public final class MainWindow implements DocumentTab.Host, EditorActions.Context
         });
 
         stage.setScene(scene);
+        stage.addEventFilter(KeyEvent.ANY, this::filterAltKeys);
         stage.getIcons().add(createIcon());
         stage.setOnCloseRequest(e -> {
             if (!confirmCloseAll()) {
@@ -376,7 +382,7 @@ public final class MainWindow implements DocumentTab.Host, EditorActions.Context
                 new SeparatorMenuItem(),
                 exit);
 
-        Menu export = new Menu("_Export", null,
+        Menu export = new Menu("E_xport", null,
                 item("Export to _Word...", "Shortcut+Shift+D", () -> exportSingle(ExportFormat.DOCX)),
                 item("Export to _HTML...", "Shortcut+Shift+H", () -> exportSingle(ExportFormat.HTML)),
                 item("Export to _PDF...", "Shortcut+Shift+P", () -> exportSingle(ExportFormat.PDF)),
@@ -435,7 +441,53 @@ public final class MainWindow implements DocumentTab.Host, EditorActions.Context
         MenuBar bar = new MenuBar(file, actions.editMenu(), actions.formatMenu(true), actions.insertMenu(true),
                 actions.tableMenu(true), aiMenu, export, view, help);
         bar.setUseSystemMenuBar(true);
+        bar.getMenus().forEach(this::installMenuKey);
         return bar;
+    }
+
+    /**
+     * Replaces the JavaFX mnemonic of a top-level menu ({@code _File}) by our own Alt+letter handling, see
+     * {@link #filterAltKeys}.
+     */
+    private void installMenuKey(Menu menu) {
+        String text = menu.getText();
+        int i = text.indexOf('_');
+        menu.setMnemonicParsing(false);
+        if (i >= 0 && i + 1 < text.length()) {
+            KeyCode code = KeyCode.getKeyCode(String.valueOf(Character.toUpperCase(text.charAt(i + 1))));
+            if (code != null) {
+                menuKeys.putIfAbsent(code, menu);
+            }
+            menu.setText(text.substring(0, i) + text.substring(i + 1));
+        }
+    }
+
+    /**
+     * Windows reports AltGr as Ctrl+Alt. JavaFX toggles a "mnemonic mode" on every key press with Alt down and, while
+     * it is on, treats plain letters as Alt+letter: typing AltGr characters such as # | [ ] @ (Swiss and German
+     * keyboards) could leave it on, and the next letter opened a menu. The top-level menus therefore have no JavaFX
+     * mnemonics: Alt+letter without Ctrl (so never AltGr) opens them here, and the AltGr key itself is kept away from
+     * the menu bar, which otherwise focuses its first menu when Alt is pressed and released alone.
+     */
+    private void filterAltKeys(KeyEvent e) {
+        KeyCode code = e.getCode();
+        boolean altKey = code == KeyCode.ALT || code == KeyCode.ALT_GRAPH;
+        if (e.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (altKey && (code == KeyCode.ALT_GRAPH || e.isControlDown())) {
+                altGraphDown = true;
+                e.consume();
+            } else if (e.isAltDown() && !e.isControlDown() && !e.isMetaDown() && !e.isShiftDown()
+                    && !altGraphDown) {
+                Menu menu = menuKeys.get(code);
+                if (menu != null && menu.isVisible() && !menu.isDisable()) {
+                    e.consume();
+                    menu.show();
+                }
+            }
+        } else if (e.getEventType() == KeyEvent.KEY_RELEASED && altKey && altGraphDown) {
+            altGraphDown = false;
+            e.consume();
+        }
     }
 
     private static MenuItem item(String text, String accelerator, Runnable action) {

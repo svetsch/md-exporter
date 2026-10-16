@@ -443,7 +443,7 @@ final class EditorActions {
     }
 
     Menu tableMenu(boolean accelerators) {
-        Menu menu = new Menu("T_able");
+        Menu menu = new Menu("_Table");
         List<MenuItem> items = items(tableCommands(), accelerators);
         menu.getItems().addAll(items);
         // row / column commands need the caret in a table
@@ -674,7 +674,7 @@ final class EditorActions {
 
     /** AI menu of the menu bar. */
     Menu aiMenu() {
-        Menu menu = new Menu("A_I");
+        Menu menu = new Menu("_AI");
         MenuItem ask = new MenuItem("_Ask AI...");
         ask.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+A"));
         ask.setOnAction(e -> ctx.askAi(null));
